@@ -8,6 +8,7 @@ variable "jumpbox_ext_ip" {}
 variable "mgt_net_cidr"   { default = "10.10.0.0/24" }
 variable "web_net_cidr"   { default = "10.20.0.0/24" }
 variable "jumpbox_int_ip" { default = "10.10.0.100" }
+variable "haproxy_int_ip" { default = "10.20.0.10" }
 variable "webserver_count" { default = 2 }
  
 # Configure the VMware vCloud Director Provider
@@ -35,8 +36,12 @@ resource "vcd_network" "web_net" {
     edge_gateway = "${var.edge_gateway}"
     gateway      = "${cidrhost(var.web_net_cidr, 1)}"
 
-    dhcp_pool {
+    static_ip_pool {
         start_address = "${cidrhost(var.web_net_cidr, 10)}"
+        end_address   = "${cidrhost(var.web_net_cidr, 20)}"
+    }
+    dhcp_pool {
+        start_address = "${cidrhost(var.web_net_cidr, 50)}"
         end_address   = "${cidrhost(var.web_net_cidr, 200)}"
     }
 }
@@ -61,9 +66,23 @@ resource "vcd_vapp" "webservers" {
     cpus          = 1
     network_name  = "${vcd_network.web_net.name}"
 
+    depends_on    = [ "vcd_vapp.jumpbox" ]
+
     count         = "${var.webserver_count}"
 }
 
+# Load-balancer VM on the Webserver network
+resource "vcd_vapp" "haproxy" {
+    name          = "lb01"
+    catalog_name  = "${var.catalog}"
+    template_name = "${var.vapp_template}"
+    memory        = 1024
+    cpus          = 1
+    network_name  = "${vcd_network.web_net.name}"
+    ip            = "${var.haproxy_int_ip}"
+
+    depends_on    = [ "vcd_vapp.jumpbox" ]
+}
 
 # Inbound SSH to the Jumpbox server
 resource "vcd_dnat" "jumpbox-ssh" {
@@ -73,11 +92,25 @@ resource "vcd_dnat" "jumpbox-ssh" {
     internal_ip   = "${var.jumpbox_int_ip}"
 }
 
+# Inbound HTTP to the loadbalancer server
+resource "vcd_dnat" "loadbalance-http" {
+    edge_gateway  = "${var.edge_gateway}"
+    external_ip   = "${var.jumpbox_ext_ip}"
+    port          = 80
+    internal_ip   = "${var.haproxy_int_ip}"
+}
+
 # SNAT Outbound traffic
 resource "vcd_snat" "mgt-outbound" {
     edge_gateway  = "${var.edge_gateway}"
     external_ip   = "${var.jumpbox_ext_ip}"
     internal_ip   = "${var.mgt_net_cidr}"
+}
+
+resource "vcd_snat" "web-outbound" {
+    edge_gateway  = "${var.edge_gateway}"
+    external_ip   = "${var.jumpbox_ext_ip}"
+    internal_ip   = "${var.web_net_cidr}"
 }
 
 resource "vcd_firewall_rules" "website-fw" {
@@ -95,12 +128,32 @@ resource "vcd_firewall_rules" "website-fw" {
     }
 
     rule {
-        description      = "allow-outbound"
+        description      = "allow-loadbalancer-http"
+        policy           = "allow"
+        protocol         = "tcp"
+        destination_port = "80"
+        destination_ip   = "${var.jumpbox_ext_ip}"
+        source_port      = "any"
+        source_ip        = "any"
+    }
+
+    rule {
+        description      = "allow-mgt-outbound"
         policy           = "allow"
         protocol         = "any"
         destination_port = "any"
         destination_ip   = "any"
         source_port      = "any"
         source_ip        = "${var.mgt_net_cidr}"
+    }
+
+    rule {
+        description      = "allow-web-outbound"
+        policy           = "allow"
+        protocol         = "any"
+        destination_port = "any"
+        destination_ip   = "any"
+        source_port      = "any"
+        source_ip        = "${var.web_net_cidr}"
     }
 }
