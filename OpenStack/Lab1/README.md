@@ -9,7 +9,7 @@ The user credentials for this lab can be found already setup in environment vari
 - On Windows workstations, you'll find the environment variables setup in C:\Users\Administrator\openrc.cmd
 - On Linux workstations, you'll find the environment variables setup in /home/ubuntu/openrc
 
-# Part 2: [Creating SSH Key Pairs](SSH_Key_Pair.md)
+# Part 2: [Creating SSH Key Pairs](SSH_Key_Pairs.md)
 
 The first thing you will need to do after logging in is to setup an SSH Key Pair that will be used when launching instances. If you do not already have a pair of private / public SSH key files to hand, you will need to create one.
 
