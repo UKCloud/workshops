@@ -34,7 +34,7 @@ Create a new group as we did before. This time, when adding the rule to allow SS
 
 ![Add rule using Security Group](../images/add-sg-rule-remote.jpg)
 
-This time the option change to give you a drop down list of your current Security Groups. Even though we haven't created our jumpbox server yet, we know that it will have our previously created ```ExternalSSH``` security group applied, so by defining this internal ssh rule in terms of the external ssh group, it doesn't matter what IP address the jumpbox server is eventually allocated, it will always be allowed to SSH to internal servers.
+This time the options change to give you a drop down list of your current Security Groups. Even though we haven't created our jumpbox server yet, we know that it will have our previously created ```ExternalSSH``` security group applied, so by defining this internal ssh rule in terms of the external ssh group, it doesn't matter what IP address the jumpbox server is eventually allocated, it will always be allowed to SSH to internal servers.
 
 ### Allow SSH connections between any internal server
 
