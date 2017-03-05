@@ -6,7 +6,7 @@ Navigate to the Instances screen from the menu on the left of the screen. Expand
 
 ![Instance List](../images/instances.jpg)
 
-If you have no space floating IP addresses allocated to your project, you will first have to allocate an address by clicking the ```+``` button to the right of the IP Address drop-down.
+If you have no spare floating IP addresses allocated to your project, you will first have to allocate an address by clicking the ```+``` button to the right of the IP Address drop-down.
 
 ![Manage Floating IP](../images/no-address-allocated.jpg)
 
