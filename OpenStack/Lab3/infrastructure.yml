@@ -1,0 +1,125 @@
+heat_template_version: 2015-10-15
+
+description: >
+   This HEAT template creates a minimal infrastructure deployment of a single 
+   router, two networks and subnets. It defines a Security Group to allow inbound
+   SSH traffic and a second Security Group allowing SSH traffic between internal
+   servers.
+
+parameters:
+  external_network:
+    type: string
+    description: Name of the external network used for floating ip addresses
+    default: internet
+  dmz_subnet_cidr:
+    type: string
+    description: DMZ Subnet CIDR address
+    default: 10.0.0.0/24
+  dmz_subnet_dns:
+    type: string
+    description: DNS Servers to configure on the DMZ subnet
+    default: 8.8.8.8
+  internal_subnet_cidr:
+    type: string
+    description: DMZ Subnet CIDR address
+    default: 10.0.1.0/24
+  internal_subnet_dns:
+    type: string
+    description: DNS Servers to configure on the DMZ subnet
+    default: 8.8.8.8
+
+resources:
+  dmz_net:
+    type: OS::Neutron::Net
+    properties:
+      admin_state_up: true
+      name: DMZ
+
+  dmz_subnet:
+    type: OS::Neutron::Subnet
+    properties:
+      name: dmz_subnet
+      network: { get_resource: dmz_net }
+      allocation_pools:
+        - start: 
+            list_join: ['.', [ str_split: ['.', { get_param: dmz_subnet_cidr }, 0], str_split: ['.', { get_param: dmz_subnet_cidr }, 1], str_split: ['.', { get_param: dmz_subnet_cidr }, 2], '20' ]] 
+          end: 
+            list_join: ['.', [ str_split: ['.', { get_param: dmz_subnet_cidr }, 0], str_split: ['.', { get_param: dmz_subnet_cidr }, 1], str_split: ['.', { get_param: dmz_subnet_cidr }, 2], '200' ]]
+      cidr: { get_param: dmz_subnet_cidr }
+      dns_nameservers: [ { get_param: dmz_subnet_dns } ]
+      gateway_ip: 
+        list_join: ['.', [ str_split: ['.', { get_param: dmz_subnet_cidr }, 0], str_split: ['.', { get_param: dmz_subnet_cidr }, 1], str_split: ['.', { get_param: dmz_subnet_cidr }, 2], '1' ]]
+      ip_version: 4
+
+  internal_net:
+    type: OS::Neutron::Net
+    properties:
+      admin_state_up: true
+      name: Internal
+
+  internal_subnet:
+    type: OS::Neutron::Subnet
+    properties:
+      name: internal_subnet
+      network: { get_resource: internal_net }
+      allocation_pools:
+        - start: 
+            list_join: ['.', [ str_split: ['.', { get_param: internal_subnet_cidr }, 0], str_split: ['.', { get_param: internal_subnet_cidr }, 1], str_split: ['.', { get_param: internal_subnet_cidr }, 2], '20' ]] 
+          end: 
+            list_join: ['.', [ str_split: ['.', { get_param: internal_subnet_cidr }, 0], str_split: ['.', { get_param: internal_subnet_cidr }, 1], str_split: ['.', { get_param: internal_subnet_cidr }, 2], '200' ]]
+      cidr: { get_param: internal_subnet_cidr }
+      dns_nameservers: [ { get_param: internal_subnet_dns } ]
+      gateway_ip: 
+        list_join: ['.', [ str_split: ['.', { get_param: internal_subnet_cidr }, 0], str_split: ['.', { get_param: internal_subnet_cidr }, 1], str_split: ['.', { get_param: internal_subnet_cidr }, 2], '1' ]]
+      ip_version: 4
+
+  router:
+    type: OS::Neutron::Router
+    properties:
+      external_gateway_info: { network: { get_param: external_network } }
+      name: InternetGW
+
+  dmz_gw:
+    type: OS::Neutron::RouterInterface
+    properties:
+      router: { get_resource: router }
+      subnet: { get_resource: dmz_subnet }
+
+  internal_gw:
+    type: OS::Neutron::RouterInterface
+    properties:
+      router: { get_resource: router }
+      subnet: { get_resource: internal_subnet }
+
+  ssh_ext_secgroup:
+    type: OS::Neutron::SecurityGroup
+    properties:
+      rules:
+        - protocol: tcp
+          remote_ip_prefix: 0.0.0.0/0
+          port_range_min: 22
+          port_range_max: 22
+        - protocol: icmp
+          remote_ip_prefix: 0.0.0.0/0
+
+  ssh_int_secgroup:
+    type: OS::Neutron::SecurityGroup
+    properties:
+      rules:
+        - protocol: tcp
+          remote_mode: remote_group_id
+          remote_group_id: { get_resource: ssh_ext_secgroup }
+          port_range_min: 22
+          port_range_max: 22
+        - protocol: icmp
+          remote_mode: remote_group_id
+          remote_group_id: { get_resource: ssh_ext_secgroup }
+        - protocol: tcp
+          remote_mode: remote_group_id
+          remote_group_id: 
+          port_range_min: 22
+          port_range_max: 22
+        - protocol: icmp
+          remote_mode: remote_group_id
+          remote_group_id: 
+       

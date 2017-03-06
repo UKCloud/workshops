@@ -1,4 +1,5 @@
-# Introduction to UKCloud Cloud Native Infrastructure
+Introduction to UKCloud Cloud Native Infrastructure
+===================================================
 
 This is a series of lab-based workshops introducing customers to our Cloud Native
 Infrastructure powered by OpenStack.
@@ -17,7 +18,14 @@ Infrastructure powered by OpenStack.
 - Setting up User Credentials
 - Manipulating Instances
 
-## Lab 3 - Using other Automation Tools
+## Lab 3 - Deploying infrastructure with OpenStack HEAT
 
+- Deploying core infrastructure
+- Deploying a load-balancer stack
+- Deploying an auto-scaling Webserver cluster
+
+## Lab 4 - Using other Automation Tools
+
+- Packer
 - Terraform
 - Ansible
